@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn智能挖掘系统 - 专业联系方式查找平台</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="login-card">
+            <div class="logo-section">
+                <h1>LinkedIn智能挖掘系统</h1>
+                <p class="subtitle">专业的外贸客户联系方式挖掘平台 - 精准定位目标客户</p>
+            </div>
+            
+            <div class="login-form">
+                <div id="email-step" class="form-step active">
+                    <h2>安全验证登录</h2>
+                    <div class="input-group">
+                        <label for="email">邮箱地址</label>
+                        <input type="email" id="email" placeholder="请输入您的邮箱地址" required>
+                    </div>
+                    <button id="send-code-btn" class="btn btn-primary">发送验证码</button>
+                    <div id="email-message" class="message"></div>
+                </div>
+                
+                <div id="code-step" class="form-step">
+                    <h2>输入验证码</h2>
+                    <p class="info-text">验证码已发送至：<span id="email-display"></span></p>
+                    <div class="input-group">
+                        <label for="verification-code">验证码</label>
+                        <input type="text" id="verification-code" placeholder="请输入6位验证码" maxlength="6" required>
+                    </div>
+                    <div class="button-group">
+                        <button id="verify-btn" class="btn btn-primary">验证登录</button>
+                        <button id="resend-btn" class="btn btn-secondary">重新发送</button>
+                    </div>
+                    <div id="code-message" class="message"></div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <p>&copy; 2024 外贸LinkedIn收集系统. 专为外贸开发人员设计</p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // 登录页面特定的JavaScript
+        document.addEventListener('DOMContentLoaded', function() {
+            initLoginPage();
+        });
+    </script>
+</body>
+</html>

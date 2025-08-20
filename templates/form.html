@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn智能挖掘 - 专业联系方式查找系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <h1>LinkedIn智能挖掘系统</h1>
+                <div class="user-info">
+                    <span>当前用户：{{ user_email }}</span>
+                    <a href="{{ url_for('logout') }}" class="logout-btn">退出登录</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-card">
+            <div class="form-header">
+                <h2>目标客户联系方式挖掘</h2>
+                <p class="form-description">输入LinkedIn个人资料链接，我们将为您智能挖掘目标客户的联系方式，助力外贸业务拓展</p>
+            </div>
+            
+            <form id="linkedin-form" class="linkedin-form">
+                <div class="input-group">
+                    <label for="linkedin-count">LinkedIn链接数量</label>
+                    <select id="linkedin-count" name="linkedin_count" class="count-selector">
+                        <option value="1">1个链接</option>
+                        <option value="2">2个链接</option>
+                        <option value="3">3个链接</option>
+                        <option value="4">4个链接</option>
+                        <option value="5">5个链接</option>
+                        <option value="10">10个链接</option>
+                    </select>
+                    <div class="input-help">
+                        <span class="help-text">请先选择要提交的LinkedIn链接数量</span>
+                    </div>
+                </div>
+
+                <div id="linkedin-inputs-container" class="linkedin-inputs-container">
+                    <!-- 动态生成的输入框将在这里显示 -->
+                </div>
+
+                <div class="input-help-summary">
+                    <span class="help-text">支持多种LinkedIn URL格式，每个输入框填写一个链接</span>
+                    <span id="url-count" class="url-counter">0 个有效链接</span>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" id="submit-btn" class="btn btn-primary">
+                        <span class="btn-text">提交链接</span>
+                        <span class="btn-loading" style="display: none;">提交中...</span>
+                    </button>
+                    <button type="button" id="clear-btn" class="btn btn-secondary">清空内容</button>
+                </div>
+                
+                <div id="form-message" class="message"></div>
+            </form>
+            
+            <div class="info-section">
+                <h3>智能挖掘功能</h3>
+                <ul class="info-list">
+                    <li>🎯 <strong>精准定位</strong>：通过LinkedIn链接智能分析目标客户信息</li>
+                    <li>📧 <strong>联系方式挖掘</strong>：自动查找邮箱、电话等关键联系信息</li>
+                    <li>🔍 <strong>深度分析</strong>：挖掘职业背景、公司信息、行业关系</li>
+                    <li>⚡ <strong>批量处理</strong>：支持同时处理多个目标客户，提升工作效率</li>
+                    <li>📊 <strong>数据整理</strong>：自动整理并导出客户信息，便于后续跟进</li>
+                </ul>
+            </div>
+            
+            <div class="examples-section">
+                <h3>支持的LinkedIn链接格式</h3>
+                <div class="examples-grid">
+                    <div class="example-item">
+                        <strong>标准格式：</strong>
+                        <code>https://www.linkedin.com/in/username</code>
+                    </div>
+                    <div class="example-item">
+                        <strong>简化格式：</strong>
+                        <code>linkedin.com/in/username</code>
+                    </div>
+                    <div class="example-item">
+                        <strong>公开档案：</strong>
+                        <code>https://www.linkedin.com/pub/name/1/2/3</code>
+                    </div>
+                    <div class="example-item">
+                        <strong>移动端：</strong>
+                        <code>https://linkedin.com/in/username</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2024 外贸LinkedIn收集系统. 专为外贸开发人员设计</p>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // 表单页面特定的JavaScript
+        document.addEventListener('DOMContentLoaded', function() {
+            initFormPage();
+        });
+    </script>
+</body>
+</html>
