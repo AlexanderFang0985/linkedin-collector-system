@@ -21,8 +21,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+# 获取应用的基础目录
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+app = Flask(__name__, 
+           template_folder=os.path.join(basedir, 'templates'),
+           static_folder=os.path.join(basedir, 'static'))
 app.secret_key = os.environ.get('SECRET_KEY', 'your-default-secret-key')
+
+# 添加调试信息
+logger.info(f"应用基础目录: {basedir}")
+logger.info(f"模板文件夹路径: {os.path.join(basedir, 'templates')}")
+logger.info(f"静态文件夹路径: {os.path.join(basedir, 'static')}")
 
 # 配置信息
 QQ_EMAIL = os.environ.get('QQ_EMAIL')
@@ -30,7 +40,10 @@ QQ_PASSWORD = os.environ.get('QQ_PASSWORD')
 GOOGLE_SHEETS_ID = os.environ.get('GOOGLE_SHEETS_ID')
 
 # Google Sheets API配置
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+SCOPES = [
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/drive'
+]
 
 def get_google_sheets_client():
     """获取Google Sheets客户端"""
