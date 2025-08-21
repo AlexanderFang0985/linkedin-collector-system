@@ -320,8 +320,8 @@ def health_check():
             # 设置较短的超时时间
             socket.setdefaulttimeout(10)
 
-            server = smtplib.SMTP('smtp.qq.com', 587)
-            server.starttls()
+            # 使用与实际发送邮件相同的SSL连接方式
+            server = smtplib.SMTP_SSL('smtp.qq.com', 465)
             server.login(os.environ.get('QQ_EMAIL', ''), os.environ.get('QQ_PASSWORD', ''))
             server.quit()
             health_status['checks']['email_smtp'] = 'OK - Connection successful'
