@@ -40,10 +40,7 @@ QQ_PASSWORD = os.environ.get('QQ_PASSWORD')
 GOOGLE_SHEETS_ID = os.environ.get('GOOGLE_SHEETS_ID')
 
 # Google Sheets API配置
-SCOPES = [
-    'https://www.googleapis.com/auth/spreadsheets',
-    'https://www.googleapis.com/auth/drive'
-]
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 def get_google_sheets_client():
     """获取Google Sheets客户端"""
