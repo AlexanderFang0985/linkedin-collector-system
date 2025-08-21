@@ -12,7 +12,10 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # 配置日志
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -257,12 +260,90 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+@app.route('/health')
+def health_check():
+    """简化的健康检查端点"""
+    try:
+        # 基本的健康检查，不测试外部连接
+        return jsonify({
+            'status': 'healthy',
+            'message': '应用运行正常',
+            'timestamp': datetime.now().isoformat()
+        }), 200
+
+    except Exception as e:
+        logger.error(f"健康检查失败: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'健康检查失败: {str(e)}'
+        }), 500
+
+@app.route('/debug')
+def debug_info():
+    """调试信息端点"""
+    try:
+        # 检查环境变量（不显示敏感信息）
+        env_status = {}
+        required_vars = ['QQ_EMAIL', 'QQ_PASSWORD', 'GOOGLE_SHEETS_ID', 'GOOGLE_CREDENTIALS_JSON']
+
+        for var in required_vars:
+            value = os.environ.get(var)
+            if value:
+                if var == 'GOOGLE_CREDENTIALS_JSON':
+                    # 验证JSON格式
+                    try:
+                        import json
+                        json.loads(value)
+                        env_status[var] = 'Present and valid JSON'
+                    except json.JSONDecodeError:
+                        env_status[var] = 'Present but invalid JSON'
+                else:
+                    env_status[var] = 'Present'
+            else:
+                env_status[var] = 'Missing'
+
+        return jsonify({
+            'status': 'debug',
+            'environment_variables': env_status,
+            'timestamp': datetime.now().isoformat()
+        }), 200
+
+    except Exception as e:
+        logger.error(f"调试信息获取失败: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'调试信息获取失败: {str(e)}'
+        }), 500
+
 if __name__ == '__main__':
+    # 启动时的基本检查
+    logger.info("正在启动LinkedIn收集系统...")
+
     # 检查必要的环境变量
-    required_vars = ['QQ_EMAIL', 'QQ_PASSWORD', 'GOOGLE_SHEETS_ID']
+    required_vars = ['QQ_EMAIL', 'QQ_PASSWORD', 'GOOGLE_SHEETS_ID', 'GOOGLE_CREDENTIALS_JSON']
     missing_vars = [var for var in required_vars if not os.environ.get(var)]
-    
+
     if missing_vars:
         logger.error(f"缺少必要的环境变量: {', '.join(missing_vars)}")
-    
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+        logger.error("应用将继续启动，但功能可能受限")
+    else:
+        logger.info("所有必要的环境变量已配置")
+
+    # 测试Google凭据
+    try:
+        credentials_json = os.environ.get('GOOGLE_CREDENTIALS_JSON')
+        if credentials_json:
+            import json
+            json.loads(credentials_json)  # 验证JSON格式
+            logger.info("Google凭据JSON格式验证通过")
+        else:
+            logger.warning("未找到GOOGLE_CREDENTIALS_JSON环境变量")
+    except json.JSONDecodeError as e:
+        logger.error(f"Google凭据JSON格式错误: {e}")
+    except Exception as e:
+        logger.error(f"Google凭据验证失败: {e}")
+
+    port = int(os.environ.get('PORT', 5000))
+    logger.info(f"应用将在端口 {port} 上启动")
+
+    app.run(debug=False, host='0.0.0.0', port=port)
