@@ -1,5 +1,7 @@
 import os
 import re
+import sys
+import json
 import smtplib
 import random
 import string
@@ -7,6 +9,7 @@ import logging
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import flask
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import gspread
 from google.oauth2.service_account import Credentials
@@ -262,20 +265,107 @@ def logout():
 
 @app.route('/health')
 def health_check():
-    """简化的健康检查端点"""
+    """完整的健康检查端点"""
+    health_status = {
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'checks': {}
+    }
+
+    all_healthy = True
+
     try:
-        # 基本的健康检查，不测试外部连接
-        return jsonify({
-            'status': 'healthy',
-            'message': '应用运行正常',
-            'timestamp': datetime.now().isoformat()
-        }), 200
+        # 1. 检查环境变量
+        required_vars = ['QQ_EMAIL', 'QQ_PASSWORD', 'GOOGLE_SHEETS_ID', 'GOOGLE_CREDENTIALS_JSON', 'SECRET_KEY']
+        missing_vars = []
+
+        for var in required_vars:
+            value = os.environ.get(var)
+            if not value:
+                missing_vars.append(var)
+            elif var == 'GOOGLE_CREDENTIALS_JSON':
+                # 验证JSON格式
+                try:
+                    import json
+                    json.loads(value)
+                    health_status['checks'][var] = 'OK - Valid JSON'
+                except json.JSONDecodeError:
+                    health_status['checks'][var] = 'ERROR - Invalid JSON'
+                    all_healthy = False
+            else:
+                health_status['checks'][var] = 'OK'
+
+        if missing_vars:
+            health_status['checks']['missing_vars'] = f"Missing: {', '.join(missing_vars)}"
+            all_healthy = False
+
+        # 2. 测试邮件连接（带超时和错误处理）
+        try:
+            import smtplib
+            import socket
+
+            # 设置较短的超时时间
+            socket.setdefaulttimeout(10)
+
+            server = smtplib.SMTP('smtp.qq.com', 587)
+            server.starttls()
+            server.login(os.environ.get('QQ_EMAIL', ''), os.environ.get('QQ_PASSWORD', ''))
+            server.quit()
+            health_status['checks']['email_smtp'] = 'OK - Connection successful'
+
+        except Exception as e:
+            health_status['checks']['email_smtp'] = f'WARNING - {str(e)[:100]}'
+            # 邮件连接失败不影响整体健康状态，只是警告
+            logger.warning(f"邮件连接测试失败: {e}")
+
+        # 3. 测试Google Sheets连接（带超时和错误处理）
+        try:
+            import gspread
+            import json
+            from google.oauth2.service_account import Credentials
+
+            credentials_json = os.environ.get('GOOGLE_CREDENTIALS_JSON')
+            if credentials_json:
+                credentials_dict = json.loads(credentials_json)
+                credentials = Credentials.from_service_account_info(credentials_dict)
+                gc = gspread.authorize(credentials)
+
+                # 尝试打开工作表（带超时）
+                sheet_id = os.environ.get('GOOGLE_SHEETS_ID')
+                if sheet_id:
+                    sheet = gc.open_by_key(sheet_id)
+                    health_status['checks']['google_sheets'] = 'OK - Connection successful'
+                else:
+                    health_status['checks']['google_sheets'] = 'ERROR - No sheet ID'
+                    all_healthy = False
+            else:
+                health_status['checks']['google_sheets'] = 'ERROR - No credentials'
+                all_healthy = False
+
+        except Exception as e:
+            health_status['checks']['google_sheets'] = f'WARNING - {str(e)[:100]}'
+            # Google Sheets连接失败不影响整体健康状态，只是警告
+            logger.warning(f"Google Sheets连接测试失败: {e}")
+
+        # 4. 检查Flask应用状态
+        health_status['checks']['flask_app'] = 'OK - Running'
+
+        # 设置最终状态
+        if all_healthy:
+            health_status['status'] = 'healthy'
+            health_status['message'] = '所有系统正常运行'
+            return jsonify(health_status), 200
+        else:
+            health_status['status'] = 'degraded'
+            health_status['message'] = '部分系统存在问题，但应用仍可运行'
+            return jsonify(health_status), 200  # 返回200以通过Railway健康检查
 
     except Exception as e:
         logger.error(f"健康检查失败: {e}")
         return jsonify({
             'status': 'error',
-            'message': f'健康检查失败: {str(e)}'
+            'message': f'健康检查失败: {str(e)}',
+            'timestamp': datetime.now().isoformat()
         }), 500
 
 @app.route('/debug')
@@ -284,7 +374,7 @@ def debug_info():
     try:
         # 检查环境变量（不显示敏感信息）
         env_status = {}
-        required_vars = ['QQ_EMAIL', 'QQ_PASSWORD', 'GOOGLE_SHEETS_ID', 'GOOGLE_CREDENTIALS_JSON']
+        required_vars = ['QQ_EMAIL', 'QQ_PASSWORD', 'GOOGLE_SHEETS_ID', 'GOOGLE_CREDENTIALS_JSON', 'SECRET_KEY']
 
         for var in required_vars:
             value = os.environ.get(var)
@@ -297,6 +387,8 @@ def debug_info():
                         env_status[var] = 'Present and valid JSON'
                     except json.JSONDecodeError:
                         env_status[var] = 'Present but invalid JSON'
+                elif var in ['QQ_PASSWORD', 'SECRET_KEY']:
+                    env_status[var] = f'Present ({len(value)} chars)'
                 else:
                     env_status[var] = 'Present'
             else:
@@ -305,7 +397,9 @@ def debug_info():
         return jsonify({
             'status': 'debug',
             'environment_variables': env_status,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'python_version': sys.version,
+            'flask_version': flask.__version__
         }), 200
 
     except Exception as e:
@@ -320,7 +414,7 @@ if __name__ == '__main__':
     logger.info("正在启动LinkedIn收集系统...")
 
     # 检查必要的环境变量
-    required_vars = ['QQ_EMAIL', 'QQ_PASSWORD', 'GOOGLE_SHEETS_ID', 'GOOGLE_CREDENTIALS_JSON']
+    required_vars = ['QQ_EMAIL', 'QQ_PASSWORD', 'GOOGLE_SHEETS_ID', 'GOOGLE_CREDENTIALS_JSON', 'SECRET_KEY']
     missing_vars = [var for var in required_vars if not os.environ.get(var)]
 
     if missing_vars:
